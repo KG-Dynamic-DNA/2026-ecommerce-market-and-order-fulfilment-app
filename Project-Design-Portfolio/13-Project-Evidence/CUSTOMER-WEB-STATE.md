@@ -1,0 +1,116 @@
+# Customer, reseller, and administrator web implementation state
+
+## Objective and phase
+
+- Objective: deliver one responsive marketplace web application for customer, reseller, and administrator accounts.
+- Application: `src/MzansiMarket.CustomerWeb`.
+- Current phase: shared, responsive customer, reseller, and administrator journeys through FE-010.
+- Production API default: `https://mzansi-market-api.onrender.com`.
+
+## Architecture and decisions
+
+- React 19, TypeScript 6, and Vite 8 remain the frontend foundation.
+- A typed API client now owns all HTTP contracts, bearer-session persistence, one-at-a-time token refresh, API problem parsing, and a bounded 30-second request timeout.
+- Authentication tokens are kept in session storage rather than long-lived local storage. Logout-all is exposed by the client for later account-security UI expansion.
+- One role-aware application shell serves customers, resellers, and system administrators. Seller registration also creates the customer profile required by the backend.
+- Customer catalogue, product, cart, and checkout contracts intentionally omit reseller identity; store ownership remains private server-side operational data.
+- Product, stock, cart, price, promotion, delivery, checkout, payment, and fulfilment state comes only from the ASP.NET API. The former mock catalogue is no longer used by the application.
+- Translucency remains limited to navigation and modal layers. Content and transactional surfaces use opaque cards with clear focus treatment.
+- Sheets restore focus, close with Escape, contain keyboard focus, and lock background scrolling. Reduced-motion and reduced-transparency fallbacks remain active.
+
+## Completed frontend work units
+
+1. `FE-001 API and session foundation` — PASS
+   - Typed contracts for identity, catalogue, addresses, cart, checkout, sandbox payment, and fulfilment.
+   - Automatic refresh-token exchange after a 401, session clearing on refresh failure, and normalized API errors.
+   - Loading, empty, retry, busy, disabled, and live-region feedback states.
+
+2. `FE-002 Customer identity and account` — PASS
+   - Customer registration, seller registration, login, session restoration, sign-out, role-aware navigation, and account summary.
+   - Address list, create, update, default selection, and recoverable delete confirmation.
+
+3. `FE-003 Live shopping and checkout` — PASS against available APIs
+   - Live categories and products, debounced server search, category, stock, and sort filters.
+   - Auth-gated cart add, quantity update, removal, current server totals, address selection, promotion input, idempotent checkout, order reservation summary, and sandbox payment initiation.
+   - The browser never collects card numbers or provider secrets. Payment completion remains a server/provider event.
+
+4. `FE-004 Reseller studio` — PASS locally and deployed on Render
+   - Full reseller application, pending/draft preparation, approval visibility, and active-store publication boundary.
+   - Store profile editing; product create/edit/archive; categories; public HTTPS image and alt-text metadata; price; stock and reorder-level adjustments; publish/unpublish; and customer-catalogue visibility.
+   - Existing fulfilment queue remains integrated for picking, packing, dispatch with carrier/tracking, and delivery transition.
+   - Desktop and mobile reseller workspace navigation uses Products, Orders, and Store settings with responsive product cards and focus-contained task sheets.
+
+5. `FE-005 Quality checkpoint` — PASS locally
+   - Production TypeScript/Vite build passes.
+   - Vitest interaction suite passes 8/8, including reseller draft creation, publication, and administrator approval.
+   - Desktop browser inspection confirms the storefront and authentication sheet render without console warnings.
+   - Mobile DOM inspection at 390×844 confirms document width remains within the viewport.
+
+6. `FE-006 Administrator approvals and unified storefront` — PASS locally and deployed on Render
+   - System administrators are routed to a protected reseller-review workspace after login.
+   - Pending, approved, rejected, and suspended application filters expose applicant, business, registration, and store-state details only to administrators.
+   - Approve, reject, and suspend actions update the API-backed review queue with immediate, accessible feedback.
+   - Customer product cards, search, cart, product details, and checkout no longer expose reseller or store identity and present Mzansi Market as the single retailer.
+
+7. `FE-007 Soft interface refinement` — PASS locally
+   - Consolidated the shared customer, reseller, and administrator presentation into a restrained warm-ivory, charcoal-green, and muted-gold visual system.
+   - Reduced card elevation and hover travel, simplified category controls, softened form focus treatment, and made navigation and transactional surfaces more consistent.
+   - Added subtle view-entry and direct press feedback, spatially consistent desktop side sheets and mobile bottom sheets, plus touch-device hover suppression.
+   - Preserved explicit focus indicators and reduced-motion, reduced-transparency, increased-contrast, and forced-colour fallbacks.
+   - Authentication uses a balanced centered dialog on desktop, expanding for registration forms, while retaining the compact mobile bottom sheet.
+   - Validation: all 9 frontend interaction tests pass and the TypeScript/Vite production build succeeds.
+
+8. `FE-008 Cross-role live synchronization` — PASS locally and deployed on Render
+   - The application maintains one event-driven marketplace change watch and revalidates only the affected customer catalogue, reseller workspace, or administrator application queue.
+   - Synchronization remains silent on the customer storefront; implementation-status text is not presented as shopping content.
+   - Customer product/category/stock views, reseller approval/catalogue/order state, and administrator reseller applications update without a full-page reload or loading-state flash.
+   - Browser focus, tab visibility, and automatic retry provide recovery when a live update request is interrupted.
+   - Approved resellers see `Add & publish product`; pending reseller products remain private drafts and publish automatically when the administrator approves the account.
+   - Validation: all 12 frontend interaction tests pass, including customer, reseller, and administrator synchronization, and the production build succeeds.
+
+9. `FE-009 Shared account settings` — PASS locally and deployed on Render
+   - Customer, reseller, and administrator accounts share one account-settings experience for personal name, mobile number, sign-in email, password, saved delivery/billing addresses, normal sign-out, and sign-out on every device.
+   - Email and password changes require the current password and deliberately end the local session so the new credentials must be used immediately.
+   - The layouts remain responsive and use the existing accessible sheet, focus, error, and announcement patterns.
+   - Validation: all 13 frontend interaction tests pass, including administrator access to the complete shared account screen, and the TypeScript/Vite production build succeeds.
+
+10. `FE-010 Responsive and truthful forms` — PASS locally and deployed on Render
+   - Customer, reseller, and administrator form controls remain within narrow viewports, stack multi-column fields on mobile, avoid automatic iOS input zoom, and leave safe scrolling space above mobile browser controls and software keyboards.
+   - Optional status is explicit in the shared field component instead of being inferred from label text. Every field labelled `(optional)` now omits browser-required validation.
+   - Reseller store descriptions, support emails, and product descriptions are now visibly labelled optional. Product image descriptions may be left blank; the API supplies the product name as accessible fallback text when an image URL is present.
+   - Validation: all 13 frontend interaction tests pass and the TypeScript/Vite production build succeeds. The updated API regression test targets .NET 10; this machine currently exposes only the .NET 8 SDK, while the Render .NET 10 release compiled successfully.
+
+## Backend dependencies that prevent a truthful “entire system” frontend
+
+- `BE-007`: cancellations, returns, refunds, customer order history, and refund status endpoints.
+- Remaining `BE-008`: staff category/promotion/role administration and direct object-storage image uploads. Reseller approval and its administrator frontend, store editing, owned product/image metadata/price/stock management, and publication are implemented.
+- `BE-009`: customer order tracking history, seller sales/stock/performance reporting, audit access, and export endpoints.
+- DATA-005 supplies the base categories. The production catalogue will remain empty until an approved reseller publishes its first product.
+- The sandbox payment initiation endpoint creates a pending provider reference. Only the protected server event endpoint can complete it; the frontend correctly does not receive that secret.
+
+## Release configuration
+
+- Static site: `mzansi-market-customer` (`srv-da8d5cajnfac73e1j7p0`).
+- Production URL: `https://mzansi-market-customer.onrender.com`.
+- Build command: `npm ci && npm run build`.
+- Publish directory: `dist`.
+- Optional override: `VITE_API_URL`; production defaults to the current Render API URL.
+- Live source release: `bd9a58b` (`Integrate customer and seller web journeys`).
+- Render deploy: `dep-da8ne8qjnfac73dsk7lg`, status `live` on 2026-08-28.
+- CDN verification: root HTTP request succeeded and the deployed JavaScript bundle contains the seller-studio and live-stock application paths.
+- Reseller release: source `bd59c46`, Render deploy `dep-dad6ltoae00c73djg1vg`, status `live` on 2026-09-04.
+- Reseller CDN verification: deployed bundle contains `Reseller studio` and `Create draft product`; post-deploy error-log scan returned no errors.
+- Administration/unified-storefront release: source `7fb5727`, Render deploy `dep-dafhk5u7bikc73eanblg`, status `live` on 2026-09-07.
+- Public verification: root returns 200; deployed bundle contains `Reseller approvals` and `One trusted checkout`, omits the former independent-seller customer copy, and the deployment error-log scan is empty.
+- Cross-role synchronization release: source `aa911a5`, Render deploy `dep-dafrf7favr4c73ce88p0`, status `live` on 2026-09-08.
+- Synchronization CDN verification: the deployed bundle uses `/api/sync/changes`, retains the `Auto-updating` catalogue status, and the public API watch is live for customer, reseller, and administrator invalidations.
+- Shared account-settings release: source `cc6b362`, Render deploy `dep-daggqpmk1f9s73ag73mg`, status `live` on 2026-09-09.
+- Account-settings CDN verification: the deployed bundle contains the shared account-management, password-change, and email-change flows; the live API verification passed profile, mobile, address, password, email, and new-credential login checks.
+- Responsive-form release: source `3462117`, Render deploy `dep-daghghnlk1mc73d34rug`, status `live` on 2026-09-09.
+- Mobile verification: at 390×844, the seller application sheet exactly matches the 390px viewport without horizontal overflow, remains vertically scrollable, and exposes mobile, registration number, and support email as non-required controls. The deployed CSS includes 16px mobile form controls and safe-area-aware bottom space.
+
+## Next dependency-ordered work
+
+1. Implement BE-007, the remaining BE-008 staff tools, and BE-009 with authorization tests.
+2. Add customer orders/returns and reseller reporting screens plus direct object-storage image upload.
+3. Run the cross-system BE-010 release checkpoint, including authenticated browser journeys and accessibility/performance auditing.

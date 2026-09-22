@@ -1,0 +1,35 @@
+# Database implementation state
+
+## Completed
+
+- Render database: `mzansi-market-db`
+- PostgreSQL version: 18
+- Region and plan: Frankfurt, Free
+- Applied migrations: initial schema plus DATA-002 through DATA-005, ending at `20260904064645_SeedMarketplaceCategories`
+- DATA-005 seeds six stable reseller product categories without destructive schema changes
+- Application schemas: `identity`, `marketplace`, `audit`
+- Application tables: 33, plus `public.__EFMigrationsHistory`
+- Seeded roles: Customer, Seller, ProductAdministrator, FulfilmentEmployee, BusinessManager, SystemAdministrator
+- Seeded categories after DATA-005: Home & living, Fashion, Beauty, Food & pantry, Art & craft, Electronics
+- Check constraints: 20
+- Application-schema indexes: 80, including primary-key and unique-constraint indexes
+- Forbidden PAN/CVV-style columns: 0
+- Repeat migration result: already up to date
+- Final public PostgreSQL access: blocked
+- Render API connectivity: private network from `mzansi-market-api`
+- Persisted authentication data-protection key ring: active
+- Customer default-address, active-cart, checkout/payment idempotency, and provider-event replay constraints: active
+
+## Verification performed
+
+- Release build succeeded with zero warnings and errors.
+- Five automated database-model and connection-normalization tests passed.
+- NuGet vulnerability audit found no vulnerable direct or transitive packages.
+- Generated idempotent SQL contains no `DROP`, `TRUNCATE`, or `DELETE` statements.
+- Live queries verified schema counts, migration history, role seeds, constraints, indexes, and payment-data boundaries.
+- API startup logs verified each additive migration and reported the database current; `/health/database` returns 200 publicly.
+- Public category retrieval returned all six DATA-005 seeds after deployment.
+
+## Operational limitation
+
+The Free database is suitable only for development/prototyping and is scheduled to expire in September 2026. It has no retained backup capability. Upgrade and establish tested backups before storing real customer, seller, order, or payment activity.
